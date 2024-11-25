@@ -1,0 +1,77 @@
+
+//OrderID,Product,Country,Quantity
+//1,Mobile,USA,10
+//2,Laptop,India,5
+//3,Tablet,USA,8
+//4,Mobile,India,3
+//5,Mobile,UK,4
+//6,Laptop,USA,6
+
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class ProductsSoldByCountry {
+
+    // Mapper Class
+    public static class SalesMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private final static IntWritable quantity = new IntWritable();
+        private Text country = new Text();
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            // Skip the header row
+            if (value.toString().startsWith("OrderID")) {
+                return;
+            }
+
+            String[] fields = value.toString().split(",");
+            if (fields.length == 4) {
+                country.set(fields[2]); // Country
+                quantity.set(Integer.parseInt(fields[3])); // Quantity
+                context.write(country, quantity);
+            }
+        }
+    }
+
+    // Reducer Class
+    public static class SalesReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private IntWritable result = new IntWritable();
+
+        @Override
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int totalQuantity = 0;
+            for (IntWritable val : values) {
+                totalQuantity += val.get();
+            }
+            result.set(totalQuantity);
+            context.write(key, result); // Country -> Total Quantity
+        }
+    }
+
+    // Driver Class
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Products Sold by Country");
+        job.setJarByClass(ProductsSoldByCountry.class);
+        job.setMapperClass(SalesMapper.class);
+        job.setCombinerClass(SalesReducer.class); // Optional for optimization
+        job.setReducerClass(SalesReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
