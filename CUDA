@@ -14,3 +14,7 @@ int main() {
 
     return 0;
 }
+
+
+// nvcc -o hello_cuda hello_cuda.cu
+// ./hello_cuda
