@@ -75,3 +75,22 @@ public class ProductsSoldByCountry {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
+
+
+// hdfs dfs -mkdir /sales_input
+// hdfs dfs -put salesdata.txt /sales_input
+// javac -classpath $(hadoop classpath) -d sales_classes ProductsSoldByCountry.java
+// jar -cvf sales.jar -C sales_classes/ .
+// hadoop jar sales.jar ProductsSoldByCountry /sales_input /sales_output
+// hdfs dfs -cat /sales_output/part-r-00000
+
+
+// salesdata.txt
+// OrderID,Product,Country,Quantity
+// 1,Mobile,USA,10
+// 2,Laptop,India,5
+// 3,Tablet,USA,8
+// 4,Mobile,India,3
+// 5,Mobile,UK,4
+// 6,Laptop,USA,6
