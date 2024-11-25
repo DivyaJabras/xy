@@ -1,0 +1,16 @@
+#include <stdio.h>
+
+// Kernel function to run on the GPU
+__global__ void helloFromGPU() {
+    printf("Hello World from GPU! Thread ID: %d\n", threadIdx.x);
+}
+
+int main() {
+    // Launch the kernel with 1 block and 10 threads
+    helloFromGPU<<<1, 10>>>();
+
+    // Synchronize to ensure all threads finish before the program exits
+    cudaDeviceSynchronize();
+
+    return 0;
+}
