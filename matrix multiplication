@@ -1,0 +1,86 @@
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class MatrixMultiplication {
+
+    // Mapper Class
+    public static class MatrixMapper extends Mapper<Object, Text, Text, Text> {
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String[] parts = value.toString().split(",");
+            if (parts.length == 3) {
+                String matrixName = parts[0].trim(); // "A" or "B"
+                int iOrK = Integer.parseInt(parts[1].trim()); // Row index (A) or column index (B)
+                int jOrK = Integer.parseInt(parts[2].trim()); // Column index (A) or row index (B)
+                double val = Double.parseDouble(parts[3].trim());
+
+                if (matrixName.equals("A")) {
+                    // Emit: key = k, value = "A,i,value"
+                    context.write(new Text(String.valueOf(jOrK)), new Text("A," + iOrK + "," + val));
+                } else if (matrixName.equals("B")) {
+                    // Emit: key = k, value = "B,j,value"
+                    context.write(new Text(String.valueOf(iOrK)), new Text("B," + jOrK + "," + val));
+                }
+            }
+        }
+    }
+
+    // Reducer Class
+    public static class MatrixReducer extends Reducer<Text, Text, Text, Text> {
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            // Store elements of Matrix A and B
+            Map<Integer, Double> matrixA = new HashMap<>();
+            Map<Integer, Double> matrixB = new HashMap<>();
+
+            for (Text val : values) {
+                String[] parts = val.toString().split(",");
+                if (parts[0].equals("A")) {
+                    int i = Integer.parseInt(parts[1]);
+                    double value = Double.parseDouble(parts[2]);
+                    matrixA.put(i, value);
+                } else if (parts[0].equals("B")) {
+                    int j = Integer.parseInt(parts[1]);
+                    double value = Double.parseDouble(parts[2]);
+                    matrixB.put(j, value);
+                }
+            }
+
+            // Compute partial product
+            for (Map.Entry<Integer, Double> entryA : matrixA.entrySet()) {
+                for (Map.Entry<Integer, Double> entryB : matrixB.entrySet()) {
+                    int i = entryA.getKey();
+                    int j = entryB.getKey();
+                    double product = entryA.getValue() * entryB.getValue();
+
+                    // Emit: key = "i,j", value = product
+                    context.write(new Text(i + "," + j), new Text(String.valueOf(product)));
+                }
+            }
+        }
+    }
+
+    // Driver Class
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Matrix Multiplication");
+        job.setJarByClass(MatrixMultiplication.class);
+        job.setMapperClass(MatrixMapper.class);
+        job.setReducerClass(MatrixReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
