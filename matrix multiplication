@@ -84,3 +84,27 @@ public class MatrixMultiplication {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
+
+// matrixA.txt
+// A,0,0,1
+// A,0,1,2
+// A,1,0,3
+// A,1,1,4
+
+// matrixB.txt
+// B,0,0,5
+// B,1,0,6
+// B,0,1,7
+// B,1,1,8
+
+// hdfs dfs -mkdir /matrix_input
+// hdfs dfs -put matrixA.txt /matrix_input
+// hdfs dfs -put matrixB.txt /matrix_input
+
+// javac -classpath $(hadoop classpath) -d matrix_classes MatrixMultiplication.java
+// jar -cvf matrix.jar -C matrix_classes/ .
+
+// hadoop jar matrix.jar MatrixMultiplication /matrix_input /matrix_output
+
+// hdfs dfs -cat /matrix_output/part-r-00000
